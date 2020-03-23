@@ -10,18 +10,12 @@ export default () => {
   const username = useInput("")
   const firstName = useInput("")
   const lastName = useInput("")
-  const email = useInput("asdf@sdf.com")
-  const [requestSecret] = useMutation(LOG_IN, {
-    update: (_, { data }) => {
-      const { requestSecret } = data
-      if (!requestSecret) {
-        toast.error("You don't have an account yet!")
-        setTimeout(() => setAction('signUp'), 2000)
-      }
-    },
+  const secret = useInput("")
+  const email = useInput("")
+  const [requestSecretMutation] = useMutation(LOG_IN, {
     variables: { email: email.value }
   })
-  const [createAccount] = useMutation(CREATE_ACCOUNT, {
+  const [createAccountMutation] = useMutation(CREATE_ACCOUNT, {
     variables: {
       email: email.value,
       username: username.value,
@@ -30,12 +24,23 @@ export default () => {
     }
   })
 
-  const onSubmit = e => {
+  const onSubmit = async (e) => {
     e.preventDefault()
     
     if (action === 'logIn') {
       if (email.value !== '') {
-        requestSecret()
+        try {
+          const { data: {requestSecret} } = await requestSecretMutation()
+          if (!requestSecret) {
+            toast.error("You don't have an account yet!")
+            setTimeout(() => setAction('signUp'), 2000)
+          } else {
+            toast.success("Check the secret code on email")
+            setAction("confirm")
+          }
+        } catch {
+          toast.error("Can't request secret, try again")
+        }
       } else {
         toast.error("Email is required")
       }
@@ -45,7 +50,17 @@ export default () => {
         firstName.value !== '' &&
         lastName.value !== ''
       ) {
-        createAccount()
+        try {
+          const { data: {createAccount} } = await createAccountMutation()
+          if (!createAccount) {
+            toast.error("Can't create account")
+          } else {
+            toast.success("Account created! Log In now")
+            setTimeout(() => setAction('logIn'), 3000)
+          }
+        } catch (e) {
+          toast.error(e.message)
+        }
       } else {
         toast.error("All fields are required")
       }
@@ -60,5 +75,6 @@ export default () => {
     lastName={lastName}
     email={email}
     onSubmit={onSubmit}
+    secret={secret}
   />
 }
